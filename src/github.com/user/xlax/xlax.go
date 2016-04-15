@@ -4,28 +4,18 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"sync"
+	"net/http/httputil"
 	"strconv"
+	"sync"
 )
 
 var mu sync.Mutex
-var count int
-
-func echoString(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "hello, World!")
-}
-
-func counter(w http.ResponseWriter, r *http.Request) {
-	mu.Lock()
-	count++
-	fmt.Fprintf(w, "Count %d\n", count)
-	mu.Unlock()
-}
 
 type avail bool
 
 // TODO add support for multiple rooms
 var occupied avail
+
 func (s avail) String() string {
 	if s {
 		return "OCCUPIED"
@@ -47,7 +37,7 @@ func room(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "%s is currently %s\n", room, occupied)
 	case "PUT":
 		// Update an existing record.
-		in,err := strconv.Atoi(r.FormValue("value"))
+		in, err := strconv.Atoi(r.FormValue("value"))
 		if err != nil {
 			msg := fmt.Sprintf("'%s' is an illegal value: %s\n",
 				r.FormValue("value"), err)
@@ -78,13 +68,19 @@ func room(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	http.HandleFunc("/",
+		func(w http.ResponseWriter, r *http.Request) {
+			dump,err := httputil.DumpRequestOut(r, true)
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Printf("%s\n", dump)
+		})
 	http.HandleFunc("/room", room)
-	http.HandleFunc("/", echoString)
-	http.HandleFunc("/count", counter)
-
-	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "I'm alive")
-	})
+	http.HandleFunc("/health",
+		func(w http.ResponseWriter, r *http.Request) {
+			fmt.Fprintf(w, "I'm alive")
+		})
 
 	log.Fatal(http.ListenAndServe(":8081", nil))
 
