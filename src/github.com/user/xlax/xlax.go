@@ -24,9 +24,10 @@ func (s avail) String() string {
 	}
 }
 
-func isAbout(val int, center int) bool {
+type sensor int
+func (s sensor) isAbout(center int) bool {
 	const fuzz int = 100
-	return (val > (center - fuzz)) && (val < (center + fuzz))
+	return (int(s) > (center - fuzz)) && (int(s) < (center + fuzz))
 }
 
 func room(w http.ResponseWriter, r *http.Request) {
@@ -37,17 +38,18 @@ func room(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "%s is currently %s\n", room, occupied)
 	case "PUT":
 		// Update an existing record.
-		in, err := strconv.Atoi(r.FormValue("value"))
+		v, err := strconv.Atoi(r.FormValue("value"))
 		if err != nil {
 			msg := fmt.Sprintf("'%s' is an illegal value: %s\n",
 				r.FormValue("value"), err)
 			http.Error(w, msg, 400)
 		}
+		in := sensor(v)
 		// calculate new value
 		var newValue avail
-		if isAbout(in, 200) {
+		if in.isAbout(200) {
 			newValue = true
-		} else if isAbout(in, 600) {
+		} else if in.isAbout(600) {
 			newValue = false
 		} else {
 			return
